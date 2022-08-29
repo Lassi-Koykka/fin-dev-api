@@ -2,7 +2,7 @@
 Astro
 Active Server Pages
 Android
-Angular
+Angular.js
 Apache
 Apache Cocoon
 Apache Struts
@@ -15,6 +15,9 @@ AWS
 Bash
 Bootstrap
 Bottle
+C
+C++
+C#
 Cake PHP
 Catalyst
 CherryPy
@@ -27,7 +30,7 @@ Drupal
 Ember
 ECMAScript
 ES6
-Express 
+Elixir
 Express.js
 F#
 Fat-Free Framework
@@ -42,6 +45,7 @@ Grails
 GraphQL
 Grok
 HTML
+Haskell
 Java 
 JavaScript
 Javaserver Pages
@@ -72,11 +76,11 @@ PLAY
 postgre
 PRADO
 Pylons web framework
+Phoenix
 Python
 Quixote
 R 
 React Native
-React
 React.js
 Redux
 REST
@@ -94,7 +98,6 @@ Sinatra
 Spring
 SvelteKit
 Svelte
-Solid
 Solid.js
 SQL
 Stripes
@@ -103,7 +106,7 @@ Symfony
 TurboGears
 Typescript
 Unity
-Vue
+Vue.js
 web2py
 webpy
 Wordpress

@@ -1,16 +1,18 @@
 package main
 
 import (
-    "io/ioutil"
     "fmt"
     "os"
+    "io/ioutil"
     "strings"
+    "regexp"
     "net/http"
     "encoding/json"
+    "github.com/lassi-koykka/fin-dev-api/set"
 )
 
-const BASE_URL = "https://duunitori.fi/api/v1/jobentries?search=koodari&search_also_descr=1&format=json"
 
+const BASE_URL = "https://duunitori.fi/api/v1/jobentries?search=koodari&search_also_descr=1&format=json"
 
 type Posting struct {
     Slug string
@@ -40,6 +42,10 @@ func readKeywords() []string {
     check(err)
     content := string(data)
     keywords := strings.Split(content, "\n")
+    result := []string{}
+    for _, kw := range keywords {
+        result = append(result, strings.TrimSpace(kw))
+    }
     return keywords
 }
 
@@ -96,13 +102,57 @@ func getAllPosts(saveToFile bool) ApiData {
     return data
 }
 
+// Go through each posting and
+// 1. regex all match all words in keywords list
+func handleData(postings []Posting, keywords []string) {
+    keywordsFound := set.NewStrSet()
+    technologiesByPosting := make(map[string][]string)
+    //TODO FINISH COUNTING
+    // technologyCountsOverall := make(map[string]int)
+    // technologyCountsByCity := make(map[string]map[string]int)
+    for _, p := range postings {
+        descr := strings.ToLower(p.Descr)
+        for _, keyword := range keywords {
+            kw := strings.ToLower(keyword)
+            resultKw := strings.ReplaceAll(keyword, ".js", "")
+            found := false
+            if len(kw) == 1 {
+                matchString := `\b(` + kw + `\.|` + kw + `\,)\b`
+                result, err := regexp.MatchString(matchString, descr)
+                check(err)
+                found = result
+            } else if strings.Contains(kw, ".js") {
+                matchString := `\b(` + kw + "|" + strings.ReplaceAll(kw, ".js", "") + `)\b`
+                result, err := regexp.MatchString(matchString, descr)
+                check(err)
+                found = result
+            } else if strings.ContainsAny(kw, "#+.- ") {
+                if strings.Contains(descr, kw) { found = true }
+            } else {
+                matchString := `\b(` + kw + `)\b`
+                result, err := regexp.MatchString(matchString, descr)
+                check(err)
+                found = result 
+            }
+
+            if found { 
+                keywordsFound.Add(resultKw) 
+            }
+
+        }
+
+        // city := strings.ToLower(*p.Municipality_name)
+        fmt.Println(keywordsFound.ToSlice())
+        technologiesByPosting[p.Slug] = keywordsFound.ToSlice()
+    }
+}
 
 func main() {
     println("Running main")
-    // keywords := readKeywords()
-    // fmt.Println(keywords)
+    keywords := readKeywords()
 
     // apiData := getAllPosts(true)
     apiData := readPostsFromFile()
+    handleData(apiData.Results, keywords)
     fmt.Println(len(apiData.Results))
 }
