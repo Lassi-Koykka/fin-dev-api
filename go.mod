@@ -1,3 +1,3 @@
 module github.com/lassi-koykka/fin-dev-api
 
-go 1.17
+go 1.19

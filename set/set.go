@@ -1,32 +1,36 @@
 package set
 
-var exists = struct{}{}
-type StrSet map[string]struct{}
-
-func NewStrSet() StrSet {
-    return make(map[string]struct{})
+type setType interface {
+    int | int8 | int16 | int32 | int64 | string
 }
 
-func (setPtr *StrSet) Add(val string) {
-    set := *setPtr
-    set[val] = exists
+var exists = struct{}{}
+type Set[T setType] struct {
+    d map[T]struct{}
+}
+
+func New[T setType]() *Set[T] {
+    s := &Set[T]{}
+    s.d = make(map[T]struct{})
+    return s
+}
+
+func (set *Set[T]) Add(val T) {
+    set.d[val] = exists
 } 
 
-func (setPtr *StrSet) Includes(val string) bool {
-    set := *setPtr
-    _, ok := set[val]
+func (set *Set[T]) Includes(val T) bool {
+    _, ok := set.d[val]
     return ok
 } 
 
-func (setPtr *StrSet) Remove(val string) {
-    set := *setPtr
-    delete(set, val)
+func (set *Set[T]) Remove(val T) {
+    delete(set.d, val)
 } 
 
-func (setPtr *StrSet) ToSlice() []string {
-    set := *setPtr
-    keys := []string{}
-    for key := range set {
+func (set *Set[T]) Value() []T {
+    keys := []T{}
+    for key := range set.d {
         keys = append(keys, key)
     }
     return keys
