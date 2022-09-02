@@ -3,7 +3,7 @@ package postparser
 import (
 	"fmt"
 	"math"
-
+	"os"
 	"github.com/lassi-koykka/fin-dev-api/src/datastructures/countmap"
 	"github.com/lassi-koykka/fin-dev-api/src/datastructures/set"
 	g "github.com/lassi-koykka/fin-dev-api/src/utils"
@@ -64,14 +64,14 @@ const (
 )
 
 func FetchAndProcessPosts(keywords []string) ProcessingResult {
-
+	_, debug := os.LookupEnv("DEBUG")
 	postingsChan := make(chan []Posting, 300)
 
 	var data ApiData
 	data = jsonutils.JsonParse[ApiData](g.Fetch(BASE_URL))
 
 	pages := int(math.Ceil(float64(data.Count) / POSTS_PER_PAGE))
-	println("pages", pages)
+	println("Postings:", data.Count, "\tpages:", pages)
 
 	postings := ParseKeywordsInPostings(data.Results, keywords)
 	postingsChan <- postings
@@ -84,7 +84,7 @@ func FetchAndProcessPosts(keywords []string) ProcessingResult {
 			var newData ApiData
 			url := BASE_URL + "&page=" + fmt.Sprintf("%d", i)
 			bodyData := g.Fetch(url)
-			println("GET " + url)
+			if debug { println("GET " + url) }
 			newData = jsonutils.JsonParse[ApiData](bodyData)
 			postings := ParseKeywordsInPostings(newData.Results, keywords)
 			postingsChan <- postings

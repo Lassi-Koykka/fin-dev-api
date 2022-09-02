@@ -12,6 +12,7 @@ Asp.net
 Aspnet
 Assembly
 AWS
+Azure
 Bash
 Bootstrap
 Bottle
@@ -44,6 +45,7 @@ Golang
 Grails
 GraphQL
 Grok
+Google Cloud Platform
 HTML
 Haskell
 Java 
