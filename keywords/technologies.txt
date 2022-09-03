@@ -1,60 +1,64 @@
 .NET
-Astro
+API
+AWS
 Active Server Pages
 Android
 Angular.js
+Ansible
 Apache
 Apache Cocoon
 Apache Struts
 Apache Wicket
-API
 Asp.net
 Aspnet
 Assembly
-AWS
+Astro
 Azure
 Bash
 Bootstrap
 Bottle
 C
-C++
 C#
+C++
+CSS
 Cake PHP
 Catalyst
 CherryPy
 CodeIgniter
 CoffeeScript
-CSS
+Dart
 Django
 Docker
 Drupal
-Ember
 ECMAScript
 ES6
 Elixir
+Ember
 Express.js
 F#
 Fat-Free Framework
 Firebase
 Flask
-flutter
+Flutter
 FuelPHP
 Git
 GitHub
+Godot
 Golang
+Google Cloud Platform
 Grails
 GraphQL
 Grok
-Google Cloud Platform
 HTML
 Haskell
+JHipster
+JSON
+JSP
 Java 
 JavaScript
 Javaserver Pages
-JHipster
-jQuery
-JSON
-JSP
+Jenkins
+Julia
 Kotlin
 Laravel
 Lift
@@ -67,53 +71,57 @@ Mojolicious
 MongoDB
 MooTools
 MySQL
-Node.js
 NoSQL
+Node.js
+NumPy
 Objective-C
-Padrino
-Perl
-Phalcon
 PHP
 PLAY
-postgre
 PRADO
-Pylons web framework
+Padrino
+Pandas
+Perl
+Phalcon
 Phoenix
+PostgreSQL
+Pylons web framework
 Python
 Quixote
 R 
+REST
 React Native
 React.js
 Redux
-REST
 Robot-framework
-Ruby on Rails
 Ruby
+Ruby on Rails
 Rust
+SCSS
+SQL
 Sails.js
-sass
+Sass
 Scalatra
-scss
 Seaside
 Shell
 Sinatra
+SolidJS
 Spring
-SvelteKit
-Svelte
-Solid.js
-SQL
 Stripes
+Svelte
+SvelteKit
 Swift
 Symfony
+TensorFlow
 TurboGears
 Typescript
 Unity
 Vue.js
-web2py
-webpy
-Wordpress
 WP
+Wordpress
 Wt 
 Yesod
 Yii Framework
 Zend Framework
+jQuery
+web2py
+webpy

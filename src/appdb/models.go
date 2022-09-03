@@ -1,7 +1,7 @@
-package db
+package appdb
+
 import (
 	"time"
-	"gorm.io/gorm"
 )
 
 type Posting struct {
@@ -15,7 +15,6 @@ type Posting struct {
 	Keywords   []*Keyword `gorm:"many2many:posting_keywords;"`
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
-	DeletedAt  gorm.DeletedAt `gorm:"index"`
 }
 
 type Keyword struct {
@@ -23,5 +22,4 @@ type Keyword struct {
 	Postings  []*Posting `gorm:"many2many:posting_keywords;"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
-	DeletedAt gorm.DeletedAt `gorm:"index"`
 }

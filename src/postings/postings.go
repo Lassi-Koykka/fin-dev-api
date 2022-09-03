@@ -1,10 +1,10 @@
-package postparser
+package postings
 
 import (
 	"fmt"
 	"math"
 	"os"
-	"github.com/lassi-koykka/fin-dev-api/src/datastructures/countmap"
+
 	"github.com/lassi-koykka/fin-dev-api/src/datastructures/set"
 	g "github.com/lassi-koykka/fin-dev-api/src/utils"
 	"github.com/lassi-koykka/fin-dev-api/src/utils/jsonutils"
@@ -34,36 +34,27 @@ type ApiData struct {
 }
 
 type Posting struct {
-	Slug          string
-	Heading       string
-	DatePosted    string
-	ImageUrl      string
-	Descr         string
-	Location      string
-	Company       string
-	KeywordsFound []string
+	Slug       string
+	Heading    string
+	DatePosted string
+	Url        string
+	ImageUrl   string
+	Descr      string
+	Location   string
+	Company    string
+	Keywords   []string
 }
 
 // techCountsOverall := countmap.New[int]()
 // techCountsByLocation := make(map[string]countmap.CountMap[int])
 // techCountsByCompany := make(map[string]countmap.CountMap[int])
-type TechCounts struct {
-	Overall    countmap.CountMap[int]
-	ByLocation map[string]countmap.CountMap[int]
-	ByCompany  map[string]countmap.CountMap[int]
-}
-
-type ProcessingResult struct {
-	Postings   []Posting
-	TechCounts TechCounts
-}
 
 const (
 	BASE_URL       = "https://duunitori.fi/api/v1/jobentries?search=koodari&search_also_descr=1&format=json"
 	POSTS_PER_PAGE = 20
 )
 
-func FetchAndProcessPosts(keywords []string) ProcessingResult {
+func FetchAndProcessPostings(keywords []string) []Posting {
 	_, debug := os.LookupEnv("DEBUG")
 	postingsChan := make(chan []Posting, 300)
 
@@ -73,20 +64,38 @@ func FetchAndProcessPosts(keywords []string) ProcessingResult {
 	pages := int(math.Ceil(float64(data.Count) / POSTS_PER_PAGE))
 	println("Postings:", data.Count, "\tpages:", pages)
 
-	postings := ParseKeywordsInPostings(data.Results, keywords)
-	postingsChan <- postings
-
 	var wg sync.WaitGroup
-	wg.Add(pages - 1)
+	wg.Add(pages)
+
+	postingsChan <- parseKeywordsInPostings(data.Results, keywords)
+
+	wg.Done()
 
 	for i := 2; i <= pages; i++ {
 		go func(i int) {
-			var newData ApiData
+			var newData1 ApiData
+			var newData2 ApiData
 			url := BASE_URL + "&page=" + fmt.Sprintf("%d", i)
-			bodyData := g.Fetch(url)
-			if debug { println("GET " + url) }
-			newData = jsonutils.JsonParse[ApiData](bodyData)
-			postings := ParseKeywordsInPostings(newData.Results, keywords)
+
+			// This is hacky, I know.
+			// But how else can you fix a broken api which occasionally returns sligthly different output at random?
+
+			newData1 = jsonutils.JsonParse[ApiData](g.Fetch(url))
+			newData2 = jsonutils.JsonParse[ApiData](g.Fetch(url))
+			results1 := newData1.Results
+			results2 := newData2.Results
+
+			for i := 0; i < len(results1) && i < len(results2); i++ {
+				if results1[i].Slug != results2[i].Slug {
+					println("MISMATCH", results1[i].Slug)
+					results1 = append(results1, results2[i])
+				}
+			}
+
+			if debug {
+				println("GET " + url)
+			}
+			postings := parseKeywordsInPostings(results1, keywords)
 			postingsChan <- postings
 			wg.Done()
 		}(i)
@@ -97,50 +106,19 @@ func FetchAndProcessPosts(keywords []string) ProcessingResult {
 		close(postingsChan)
 	}()
 
-	allPostings := []Posting{}
+	postingMap := make(map[string]Posting)
 	for postings := range postingsChan {
-		allPostings = append(allPostings, postings...)
-	}
-	return ProcessingResult{
-		Postings:   allPostings,
-		TechCounts: CountKeywordOccurances(allPostings),
-	}
-}
-
-func CountKeywordOccurances(postings []Posting) TechCounts {
-	techCountsOverall := *countmap.New[int]()
-	techCountsByLocation := make(map[string]countmap.CountMap[int])
-	techCountsByCompany := make(map[string]countmap.CountMap[int])
-
-	for _, r := range postings {
-		// Increment overall
-		techCountsOverall.IncAll(r.KeywordsFound)
-		// Increment company tech counts
-		companyMap, ok := techCountsByCompany[r.Company]
-		if ok {
-			companyMap.IncAll(r.KeywordsFound)
-		} else {
-			companyTechCounts := countmap.New[int]()
-			companyTechCounts.IncAll(r.KeywordsFound)
-			techCountsByCompany[r.Company] = *companyTechCounts
-		}
-
-		// Increment city tech counts
-		cityMap, ok := techCountsByLocation[r.Location]
-		if ok {
-			cityMap.IncAll(r.KeywordsFound)
-		} else {
-			cityTechCounts := countmap.New[int]()
-			cityTechCounts.IncAll(r.KeywordsFound)
-			techCountsByLocation[r.Location] = *cityTechCounts
+		for _, posting := range postings {
+			postingMap[posting.Slug] = posting
 		}
 	}
 
-	return TechCounts{
-		Overall:    techCountsOverall,
-		ByLocation: techCountsByLocation,
-		ByCompany:  techCountsByCompany,
+	uniquePostings := []Posting{}
+	for _, val := range postingMap {
+		uniquePostings = append(uniquePostings, val)
 	}
+
+	return uniquePostings
 }
 
 func matchKeyword(text string, keyword string) bool {
@@ -168,10 +146,11 @@ func matchKeyword(text string, keyword string) bool {
 	return false
 }
 
-func ParseKeywordsInPostings(postings []JsonPosting, keywords []string) []Posting {
+func parseKeywordsInPostings(postings []JsonPosting, keywords []string) []Posting {
+	resultsChan := make(chan Posting, len(postings))
+
 	var wg sync.WaitGroup
 	wg.Add(len(postings))
-	resultsChan := make(chan Posting, len(postings))
 
 	for _, p := range postings {
 		go func(p JsonPosting) {
@@ -192,14 +171,14 @@ func ParseKeywordsInPostings(postings []JsonPosting, keywords []string) []Postin
 			}
 
 			resultsChan <- Posting{
-				Slug:          p.Slug,
-				Heading:       p.Heading,
-				DatePosted:    p.Date_posted,
-				ImageUrl:      p.Export_image_url,
-				Descr:         p.Descr,
-				Location:      location,
-				Company:       company,
-				KeywordsFound: keywordsFound.Value(),
+				Slug:       p.Slug,
+				Heading:    p.Heading,
+				DatePosted: p.Date_posted,
+				ImageUrl:   p.Export_image_url,
+				Descr:      p.Descr,
+				Location:   location,
+				Company:    company,
+				Keywords:   keywordsFound.Value(),
 			}
 			defer wg.Done()
 		}(p)
