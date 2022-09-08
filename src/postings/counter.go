@@ -6,9 +6,9 @@ import (
 
 
 type TechCounts struct {
-	Overall    countmap.CountMap[int]
-	ByLocation map[string]countmap.CountMap[int]
-	ByCompany  map[string]countmap.CountMap[int]
+	Overall    countmap.CountMap[int] `json:"overall"`
+	ByLocation map[string]countmap.CountMap[int] `json:"byLocation"`
+	ByCompany  map[string]countmap.CountMap[int] `json:"byCompany"`
 }
 
 func CountKeywordOccurances(postings []Posting) TechCounts {

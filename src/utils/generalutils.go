@@ -2,8 +2,9 @@ package utils
 
 import (
 	"fmt"
-	"net/http"
 	"io/ioutil"
+	"net/http"
+	"time"
 )
 
 func Check(err error) {
@@ -20,4 +21,8 @@ func Fetch(url string) []byte {
 	bodyData, parseBodyErr := ioutil.ReadAll(res.Body)
 	Check(parseBodyErr)
 	return bodyData
+}
+
+func TimeStamp() string {
+	return time.Now().Format(time.UnixDate)
 }

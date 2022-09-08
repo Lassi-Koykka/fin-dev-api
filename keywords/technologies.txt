@@ -21,6 +21,7 @@ C
 C#
 C++
 CSS
+Clojure
 Cake PHP
 Catalyst
 CherryPy

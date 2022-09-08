@@ -7,21 +7,11 @@ import (
 	"time"
 
 	"github.com/go-co-op/gocron"
+	g "github.com/lassi-koykka/fin-dev-api/src/utils"
 	appdb "github.com/lassi-koykka/fin-dev-api/src/appdb"
 	"github.com/lassi-koykka/fin-dev-api/src/postings"
 	"github.com/lassi-koykka/fin-dev-api/src/utils/fileutils"
 )
-
-func timeStamp() string {
-	return time.Now().Format(time.UnixDate)
-}
-
-func UpdateData(db appdb.AppDB, keywords []string) {
-	fmt.Println("\n------------ UPDATING DATA ------------ ", time.Now().Format(time.UnixDate), "\n ")
-	result := postings.FetchAndProcessPostings(keywords)
-	db.UpsertPostingsAndPruneDangling(result)
-	fmt.Println("\n------------ UPDATING DONE ------------\n ")
-}
 
 func main() {
 	mux := http.NewServeMux()
@@ -29,9 +19,9 @@ func main() {
 	db := appdb.Instance()
 	keywords := fileutils.ParseFileLines("keywords/technologies.txt")
 
-	UpdateData(db, keywords)
-	s.Every(1).Hours().Do(UpdateData)
-	s.StartAsync()
+	db.UpdateData(keywords)
+	s.Every(1).Hours().Do(func() {  db.UpdateData(keywords) })
+	s.StartAt(time.Time{})
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
@@ -40,19 +30,21 @@ func main() {
 		w.Header().Set("Content-Type", "application/json")
 
 		query := r.URL.Query()
-		fmt.Println(timeStamp(), "---", "GET /", query.Encode())
+		fmt.Println(g.TimeStamp(), "---", "GET /", query.Encode())
 		results := db.GetPostings(&appdb.SearchTerms{
-			Exact: query.Has("exact"),
-			Company: query.Get("company"),
+			Exact:    query.Has("exact"),
+			Company:  query.Get("company"),
 			Location: query.Get("location"),
 			TechName: query.Get("tech"),
 		})
 		json.NewEncoder(w).Encode(struct {
-			Postings []postings.Posting
-			Counts postings.TechCounts
+			Count      int                 `json:"count"`
+			Postings   []postings.Posting  `json:"postings"`
+			TechCounts postings.TechCounts `json:"techCounts"`
 		}{
-			Postings: results,
-			Counts: postings.CountKeywordOccurances(results),
+			Count:      len(results),
+			Postings:   results,
+			TechCounts: postings.CountKeywordOccurances(results),
 		})
 	})
 

@@ -3,10 +3,8 @@ package appdb
 import (
 	"fmt"
 	"strings"
-
 	"github.com/lassi-koykka/fin-dev-api/src/postings"
 	g "github.com/lassi-koykka/fin-dev-api/src/utils"
-
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -151,4 +149,11 @@ func (appdb AppDB) GetPostings(searchTerms *SearchTerms) []postings.Posting {
 
 	return resultPostings
 
+}
+
+func (db *AppDB) UpdateData(keywords []string) {
+	fmt.Println("\n------------ UPDATING DATA ------------ ", g.TimeStamp(), "\n ")
+	result := postings.FetchAndProcessPostings(keywords)
+	db.UpsertPostingsAndPruneDangling(result)
+	fmt.Println("\n------------ UPDATING DONE ------------\n ")
 }

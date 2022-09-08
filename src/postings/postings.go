@@ -34,15 +34,15 @@ type ApiData struct {
 }
 
 type Posting struct {
-	Slug       string
-	Heading    string
-	DatePosted string
-	Url        string
-	ImageUrl   string
-	Descr      string
-	Location   string
-	Company    string
-	Keywords   []string
+	Slug       string `json:"slug"`
+	Heading    string `json:"heading"`
+	DatePosted string `json:"datePosted"`
+	Url        string `json:"url"`
+	ImageUrl   string `json:"imageUrl"`
+	Descr      string `json:"descr"`
+	Location   string `json:"location"`
+	Company    string `json:"company"`
+	Keywords   []string `json:"keywords"`
 }
 
 // techCountsOverall := countmap.New[int]()
@@ -124,26 +124,50 @@ func FetchAndProcessPostings(keywords []string) []Posting {
 func matchKeyword(text string, keyword string) bool {
 	kw := strings.ToLower(keyword)
 	if len(kw) == 1 {
-		matchString := `\b(` + kw + `\.|` + kw + `\,)\b`
-		result, err := regexp.MatchString(matchString, text)
+		re, err := regexp.Compile(`\b(` + kw + `\.|` + kw + `\,)\b`)
 		g.Check(err)
-		return result
-	} else if strings.Contains(kw, ".js") {
-		matchString := `\b(` + kw + "|" + strings.ReplaceAll(kw, ".js", "") + `)\b`
-		result, err := regexp.MatchString(matchString, text)
+		return re.Match([]byte(text))
+	} else if strings.HasSuffix(strings.ToLower(kw), ".js") || strings.HasSuffix(kw, "JS") {
+		re, err := regexp.Compile(`\b(` + kw + "|" + strings.ReplaceAll(strings.ReplaceAll(kw, ".js", ""), "JS", "") + `)\b`)
 		g.Check(err)
-		return result
+		return re.Match([]byte(text))
 	} else if strings.ContainsAny(kw, "#+.- ") {
 		if strings.Contains(text, kw) {
 			return true
 		}
 	} else {
-		matchString := `\b(` + kw + `)\b`
-		result, err := regexp.MatchString(matchString, text)
+		re, err := regexp.Compile(`\b(` + kw + `)\b`)
 		g.Check(err)
-		return result
+		return re.Match([]byte(text))
 	}
 	return false
+}
+
+func tokenizeDescr (str string) []string {
+	str = strings.ToLower(str)
+	str = strings.ReplaceAll(str, "\n", " ")
+	replacer := strings.NewReplacer(
+		",", " ", 
+		". ", " ", 
+		"- ", " ", 
+		" -", " ", 
+		"/", " ", 
+		"\\", " ", 
+		"(", " ", 
+		"[", " ", 
+		"{", " ", 
+		")", " ", 
+		"]", " ", 
+		"}", " ", 
+		"*", " ", 
+		"!", " ", 
+		"?", " ", 
+		":", " ", 
+		"\"", " ", 
+		"\t", " ",
+		"'", " ")
+	result := replacer.Replace(strings.TrimSpace(strings.ToLower(str)))
+	return strings.Split(result, " ")
 }
 
 func parseKeywordsInPostings(postings []JsonPosting, keywords []string) []Posting {
@@ -155,12 +179,21 @@ func parseKeywordsInPostings(postings []JsonPosting, keywords []string) []Postin
 	for _, p := range postings {
 		go func(p JsonPosting) {
 			keywordsFound := set.New[string]()
-			text := strings.ToLower(p.Heading) + " " + strings.ToLower(p.Descr)
-			for _, keyword := range keywords {
-				if matchKeyword(text, keyword) {
-					keywordsFound.Add(strings.ReplaceAll(keyword, ".js", ""))
+			tokens := tokenizeDescr(p.Heading + " " + p.Descr)
+			for _, token :=  range tokens {
+				if len(token) < 1 { continue }
+				for _, keyword := range keywords {
+					if token == strings.ToLower(keyword) {
+						keywordsFound.Add(strings.ReplaceAll(keyword, ".js", ""))
+					}
 				}
 			}
+
+			// for _, keyword := range keywords {
+			// 	if matchKeyword(text, keyword) {
+			// 		keywordsFound.Add(strings.ReplaceAll(keyword, ".js", ""))
+			// 	}
+			// }
 
 			location, company := "none", "none"
 			if len(strings.TrimSpace(p.Municipality_name)) > 0 {
