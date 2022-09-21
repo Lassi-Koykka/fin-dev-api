@@ -27,6 +27,7 @@ func main() {
 		if r.Method != "GET" {
 			http.NotFound(w, r)
 		}
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Content-Type", "application/json")
 
 		query := r.URL.Query()

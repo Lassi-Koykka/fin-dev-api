@@ -1,8 +1,8 @@
 .NET
-API
 AWS
 Active Server Pages
 Android
+Angular
 Angular.js
 Ansible
 Apache
@@ -89,7 +89,6 @@ Pylons web framework
 Python
 Quixote
 R 
-REST
 React Native
 React.js
 Redux
@@ -116,6 +115,7 @@ TensorFlow
 TurboGears
 Typescript
 Unity
+Vue
 Vue.js
 WP
 Wordpress

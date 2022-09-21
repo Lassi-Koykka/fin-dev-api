@@ -50,8 +50,8 @@ type Posting struct {
 // techCountsByCompany := make(map[string]countmap.CountMap[int])
 
 const (
-	BASE_URL       = "https://duunitori.fi/api/v1/jobentries?search=koodari&search_also_descr=1&format=json"
-	POSTS_PER_PAGE = 20
+	BASE_URL       = "https://duunitori.fi/api/v1/61588b0a2479932129f8ec01c20c16c9179b337d/jobentries?search=koodari&search_also_descr=1&format=json"
+	POSTS_PER_PAGE = 100
 )
 
 func FetchAndProcessPostings(keywords []string) []Posting {
