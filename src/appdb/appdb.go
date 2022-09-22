@@ -75,11 +75,15 @@ func (appdb AppDB) UpsertPostingsAndPruneDangling(result []postings.Posting) {
 
 	var postingsToDelete []Posting
 	db.Not(&newPostingSlugs).Find(&postingsToDelete)
+	postingsToDeleteSlugs := []string{}
+	for _, v := range postingsToDelete {
+		postingsToDeleteSlugs = append(postingsToDeleteSlugs, v.Slug)
+	}
 
 	if len(postingsToDelete) > 0 {
 		var deletedPostings []Posting
-		db.Clauses(clause.Returning{}).Delete(&deletedPostings, &postingsToDelete)
-		db.Select(clause.Associations).Where(&postingsToDelete).Delete(&deletedPostings)
+		db.Clauses(clause.Returning{}).Delete(&deletedPostings, &postingsToDeleteSlugs)
+		db.Select(clause.Associations).Where(&postingsToDeleteSlugs).Delete(&deletedPostings)
 
 		fmt.Println("and Deleted", len(deletedPostings), "postings: ")
 		for _, dp := range deletedPostings {

@@ -1,0 +1,7 @@
+Upserted 628 postings
+2022/09/22 22:20:55 
+31;1m/home/lassi/Projects/PERSONAL/fin-dev-api/src/appdb/appdb.go:81 
+35;
+Expression tree is too large (maximum depth 1000)
+
+[DELETE FROM `postings` WHERE `postings`.`slug` = "senior-developer-swsar-15458692" AND `postings`.`heading` = "Software Developer (Senior)" AND `postings`.`date_posted` = "2022-08-25T00:00:01+03:00" AND `postings`.`image_url` = "https://duunitori.imgix.net/uploads/og-images/duunitori_og_enitentyopaikkoja.png?auto=format&crop=entropy&fit=crop&h=630&w=1200" AND `postings`.`descr` = "Wärtsilä is leading the maritime industry's transformation towards a decarbonised and sustainable future. We at Wärtsilä Marine Power are proud to offer our customers the world's widest network of maritime expertise and the full portfolio from engines to lifecycle solutions. 
