@@ -43,7 +43,6 @@ Flask
 Flutter
 FuelPHP
 Git
-GitHub
 Godot
 Golang
 Google Cloud Platform
@@ -106,6 +105,7 @@ Shell
 Sinatra
 SolidJS
 Spring
+Springboot
 Stripes
 Svelte
 SvelteKit

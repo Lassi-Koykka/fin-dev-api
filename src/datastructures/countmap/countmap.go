@@ -4,14 +4,12 @@ import (
 	"sort"
 )
 
-type entry[T countMapType] struct {
-	Key   string
-	Value T
-}
+type Entry [2]interface{}
 
 type countMapType interface {
 	int | int8 | int16 | int32 | int64
 }
+
 type CountMap[T countMapType] map[string]T
 
 func New[T countMapType]() *CountMap[T] {
@@ -76,20 +74,20 @@ func (countMap *CountMap[T]) SortedKeys() []string {
 	return keys
 }
 
-func (countMap *CountMap[T]) SortAsc() []entry[T] {
+func (countMap *CountMap[T]) SortAsc() []Entry {
 	m := *countMap
-	sorted := []entry[T]{}
+	sorted := []Entry{}
 	
 	for _, key := range countMap.SortedKeys() {
 		val, ok := m[key]
 		if(ok) {
-			sorted = append(sorted, entry[T]{Key: key, Value: val})
+			sorted = append(sorted, Entry{key, val})
 		}
 	}
 	return sorted
 }
 
-func (countMap *CountMap[T]) SortDec() []entry[T] {
+func (countMap *CountMap[T]) SortDec() []Entry {
 	sorted := countMap.SortAsc()
 	for i, j := 0, len(sorted)-1; i < j; i, j = i+1, j-1 {
 		sorted[i], sorted[j] = sorted[j], sorted[i]

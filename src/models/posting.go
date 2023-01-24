@@ -1,19 +1,17 @@
-package postings
+package models
 
 import (
 	"fmt"
 	"math"
 	"os"
-
-	"github.com/lassi-koykka/fin-dev-api/src/datastructures/set"
-	g "github.com/lassi-koykka/fin-dev-api/src/utils"
-	"github.com/lassi-koykka/fin-dev-api/src/utils/jsonutils"
-
-	// "gorm.io/driver/sqlite"
-	// "gorm.io/gorm"
 	"regexp"
 	"strings"
 	"sync"
+	"time"
+
+	"github.com/lassi-koykka/fin-dev-api/src/datastructures/countmap"
+	g "github.com/lassi-koykka/fin-dev-api/src/utils"
+	"github.com/lassi-koykka/fin-dev-api/src/utils/jsonutils"
 )
 
 type JsonPosting struct {
@@ -34,15 +32,24 @@ type ApiData struct {
 }
 
 type Posting struct {
-	Slug       string `json:"slug"`
-	Heading    string `json:"heading"`
-	DatePosted string `json:"datePosted"`
-	Url        string `json:"url"`
-	ImageUrl   string `json:"imageUrl"`
-	Descr      string `json:"descr"`
-	Location   string `json:"location"`
-	Company    string `json:"company"`
-	Keywords   []string `json:"keywords"`
+	Slug          string    `gorm:"primaryKey" json:"slug"`
+	Heading       string    `json:"heading"`
+	DatePosted    string    `json:"datePosted"`
+	Url           string    `json:"url"`
+	ImageUrl      string    `json:"imageUrl"`
+	Descr         string    `json:"descr"`
+	Location      string    `json:"location"`
+	Company       string    `json:"company"`
+	KeywordsFound []string  `gorm:"-:all" json:"keywords"`
+	Keywords      []Keyword `gorm:"many2many:posting_keywords;" json:"-"`
+	CreatedAt     time.Time `json:"-"`
+	UpdatedAt     time.Time `json:"-"`
+}
+
+type TechCounts struct {
+	Overall    []countmap.Entry            `json:"overall"`
+	ByLocation map[string][]countmap.Entry `json:"byLocation"`
+	ByCompany  map[string][]countmap.Entry `json:"byCompany"`
 }
 
 // techCountsOverall := countmap.New[int]()
@@ -54,7 +61,19 @@ const (
 	POSTS_PER_PAGE = 100
 )
 
-func FetchAndProcessPostings(keywords []string) []Posting {
+func ToPosting(p Posting) Posting {
+	slug := strings.TrimSpace(strings.ToLower(p.Slug))
+	keywords := []Keyword{}
+	for _, kw := range p.KeywordsFound {
+		keywords = append(keywords, Keyword{Name: kw})
+	}
+
+	p.Slug = slug
+	p.Keywords = keywords
+	return p
+}
+
+func FetchAndProcessPostings(keywords []Keyword) []Posting {
 	_, debug := os.LookupEnv("DEBUG")
 	postingsChan := make(chan []Posting, 300)
 
@@ -67,7 +86,7 @@ func FetchAndProcessPostings(keywords []string) []Posting {
 	var wg sync.WaitGroup
 	wg.Add(pages)
 
-	postingsChan <- parseKeywordsInPostings(data.Results, keywords)
+	postingsChan <- postingParseKeywords(data.Results, keywords)
 
 	wg.Done()
 
@@ -95,7 +114,7 @@ func FetchAndProcessPostings(keywords []string) []Posting {
 			if debug {
 				println("GET " + url)
 			}
-			postings := parseKeywordsInPostings(results1, keywords)
+			postings := postingParseKeywords(results1, keywords)
 			postingsChan <- postings
 			wg.Done()
 		}(i)
@@ -121,56 +140,22 @@ func FetchAndProcessPostings(keywords []string) []Posting {
 	return uniquePostings
 }
 
-func matchKeyword(text string, keyword string) bool {
-	kw := strings.ToLower(keyword)
-	if len(kw) == 1 {
-		re, err := regexp.Compile(`\b(` + kw + `\.|` + kw + `\,)\b`)
-		g.Check(err)
-		return re.Match([]byte(text))
-	} else if strings.HasSuffix(strings.ToLower(kw), ".js") || strings.HasSuffix(kw, "JS") {
-		re, err := regexp.Compile(`\b(` + kw + "|" + strings.ReplaceAll(strings.ReplaceAll(kw, ".js", ""), "JS", "") + `)\b`)
-		g.Check(err)
-		return re.Match([]byte(text))
-	} else if strings.ContainsAny(kw, "#+.- ") {
-		if strings.Contains(text, kw) {
-			return true
-		}
-	} else {
-		re, err := regexp.Compile(`\b(` + kw + `)\b`)
-		g.Check(err)
-		return re.Match([]byte(text))
-	}
-	return false
-}
+func tokenizeText(str string) []string {
+	nonAlphanumericRegex := regexp.MustCompile(`[^a-zA-Z0-9 - + #]+`)
+	space := regexp.MustCompile(`\s+`)
 
-func tokenizeDescr (str string) []string {
+	// Remove all alphanumeric characters
 	str = strings.ToLower(str)
+	str = strings.TrimSpace(str)
 	str = strings.ReplaceAll(str, "\n", " ")
-	replacer := strings.NewReplacer(
-		",", " ", 
-		". ", " ", 
-		"- ", " ", 
-		" -", " ", 
-		"/", " ", 
-		"\\", " ", 
-		"(", " ", 
-		"[", " ", 
-		"{", " ", 
-		")", " ", 
-		"]", " ", 
-		"}", " ", 
-		"*", " ", 
-		"!", " ", 
-		"?", " ", 
-		":", " ", 
-		"\"", " ", 
-		"\t", " ",
-		"'", " ")
-	result := replacer.Replace(strings.TrimSpace(strings.ToLower(str)))
-	return strings.Split(result, " ")
+	str = nonAlphanumericRegex.ReplaceAllString(str, " ")
+	str = space.ReplaceAllString(str, " ")
+	str = strings.TrimSpace(str)
+
+	return strings.Split(str, " ")
 }
 
-func parseKeywordsInPostings(postings []JsonPosting, keywords []string) []Posting {
+func postingParseKeywords(postings []JsonPosting, keywords []Keyword) []Posting {
 	resultsChan := make(chan Posting, len(postings))
 
 	var wg sync.WaitGroup
@@ -178,22 +163,7 @@ func parseKeywordsInPostings(postings []JsonPosting, keywords []string) []Postin
 
 	for _, p := range postings {
 		go func(p JsonPosting) {
-			keywordsFound := set.New[string]()
-			tokens := tokenizeDescr(p.Heading + " " + p.Descr)
-			for _, token :=  range tokens {
-				if len(token) < 1 { continue }
-				for _, keyword := range keywords {
-					if token == strings.ToLower(keyword) {
-						keywordsFound.Add(strings.ReplaceAll(keyword, ".js", ""))
-					}
-				}
-			}
-
-			// for _, keyword := range keywords {
-			// 	if matchKeyword(text, keyword) {
-			// 		keywordsFound.Add(strings.ReplaceAll(keyword, ".js", ""))
-			// 	}
-			// }
+			keywordsFound := parseKeywords(p, keywords)
 
 			location, company := "none", "none"
 			if len(strings.TrimSpace(p.Municipality_name)) > 0 {
@@ -204,14 +174,14 @@ func parseKeywordsInPostings(postings []JsonPosting, keywords []string) []Postin
 			}
 
 			resultsChan <- Posting{
-				Slug:       p.Slug,
-				Heading:    p.Heading,
-				DatePosted: p.Date_posted,
-				ImageUrl:   p.Export_image_url,
-				Descr:      p.Descr,
-				Location:   location,
-				Company:    company,
-				Keywords:   keywordsFound.Value(),
+				Slug:          p.Slug,
+				Heading:       p.Heading,
+				DatePosted:    p.Date_posted,
+				ImageUrl:      p.Export_image_url,
+				Descr:         p.Descr,
+				Location:      location,
+				Company:       company,
+				KeywordsFound: keywordsFound,
 			}
 			defer wg.Done()
 		}(p)
